@@ -8,7 +8,7 @@ A complete **UVM (Universal Verification Methodology) testbench** for a pair of 
 
 | Metric | Result |
 |---|---|
-| Compile | ✅ 0 Errors · 0 Warnings |
+| Compile | 0 Errors · 0 Warnings |
 | Transactions | 514 (4 corners + 10 stress + 500 random) |
 | Scoreboard checks | 1028 — **PASS=1028 FAIL=0** |
 | UVM_ERROR | 0 |
