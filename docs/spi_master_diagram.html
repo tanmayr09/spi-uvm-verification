@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPIMaster RTL Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg:       #0a0e1a;
+    --surface:  #111827;
+    --border:   #1e2d45;
+    --accent:   #00d4ff;
+    --accent2:  #7c3aed;
+    --accent3:  #10b981;
+    --warn:     #f59e0b;
+    --danger:   #ef4444;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --input-c:  #00d4ff;
+    --output-c: #10b981;
+    --internal: #7c3aed;
+    --clk-c:    #f59e0b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  header {
+    padding: 32px 48px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .chip-icon {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 24px;
+    padding: 16px 48px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+  }
+
+  /* Main layout */
+  .diagram {
+    display: grid;
+    grid-template-columns: 180px 1fr 180px;
+    gap: 0;
+    padding: 48px;
+    min-height: calc(100vh - 140px);
+    align-items: start;
+  }
+
+  /* Signal columns */
+  .signals-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 60px;
+  }
+
+  .sig {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .sig:hover { transform: translateX(3px); }
+  .sig.input-sig  { background: rgba(0,212,255,0.08);  border: 1px solid rgba(0,212,255,0.3);  color: var(--input-c); }
+  .sig.output-sig { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); color: var(--output-c); }
+  .sig.clk-sig    { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); color: var(--clk-c); }
+  .sig.spi-sig    { background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.3); color: var(--internal); }
+
+  .sig-arrow {
+    margin-left: auto;
+    font-size: 14px;
+    opacity: 0.6;
+  }
+
+  .sig-desc {
+    display: none;
+    position: absolute;
+    left: 105%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    color: var(--text);
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  .signals-col.right .sig-desc { left: auto; right: 105%; }
+  .sig:hover .sig-desc { display: block; }
+
+  /* Center — the DUT */
+  .dut-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+  }
+
+  .dut-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .dut-box {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    position: relative;
+  }
+
+  .dut-box::before {
+    content: 'SPIMaster.sv';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg);
+    padding: 0 16px;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  /* Internal blocks */
+  .block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    transition: all 0.25s;
+    cursor: pointer;
+  }
+
+  .block:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(0,212,255,0.1);
+    transform: translateY(-2px);
+  }
+
+  .block.fsm    { border-top: 3px solid var(--accent);  grid-column: 1 / -1; }
+  .block.clkgen { border-top: 3px solid var(--clk-c); }
+  .block.txbuf  { border-top: 3px solid var(--input-c); }
+  .block.rxbuf  { border-top: 3px solid var(--output-c); }
+  .block.mosi   { border-top: 3px solid var(--accent2); }
+  .block.sclk   { border-top: 3px solid var(--clk-c); }
+  .block.ss     { border-top: 3px solid var(--danger); }
+  .block.mode   { border-top: 3px solid var(--warn); grid-column: 1 / -1; }
+
+  .block-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .block.fsm    .block-title { color: var(--accent); }
+  .block.clkgen .block-title { color: var(--clk-c); }
+  .block.txbuf  .block-title { color: var(--input-c); }
+  .block.rxbuf  .block-title { color: var(--output-c); }
+  .block.mosi   .block-title { color: var(--accent2); }
+  .block.sclk   .block-title { color: var(--clk-c); }
+  .block.ss     .block-title { color: var(--danger); }
+  .block.mode   .block-title { color: var(--warn); }
+
+  .block-body {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  .reg-tag {
+    display: inline-block;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.3);
+    color: var(--internal);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    margin: 1px;
+    font-weight: 600;
+  }
+
+  .state-tag {
+    display: inline-block;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    margin: 2px;
+    font-weight: 600;
+  }
+
+  /* FSM flow inside the block */
+  .fsm-flow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .fsm-arrow {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* Detail panel */
+  .detail-panel {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 20px 28px;
+    max-width: 700px;
+    width: calc(100% - 48px);
+    box-shadow: 0 0 40px rgba(0,212,255,0.15);
+    display: none;
+    z-index: 200;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  .detail-panel.visible { display: block; }
+
+  .detail-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .close-btn {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .close-btn:hover { color: var(--text); }
+
+  .detail-code {
+    background: var(--bg);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--accent3);
+    border-left: 3px solid var(--accent);
+    margin-top: 8px;
+  }
+
+  /* Internal signal bus */
+  .int-bus {
+    grid-column: 1 / -1;
+    background: rgba(124,58,237,0.05);
+    border: 1px dashed rgba(124,58,237,0.3);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 10px;
+    color: var(--internal);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .int-bus-label {
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 8px;
+  }
+
+  /* Params bar */
+  .params-bar {
+    grid-column: 1 / -1;
+    background: rgba(245,158,11,0.05);
+    border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 10px;
+    color: var(--warn);
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .param-item { display: flex; gap: 6px; align-items: center; }
+  .param-name { color: var(--muted); }
+
+  /* Connector lines — pure CSS */
+  .connector {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: auto 0;
+    align-self: center;
+  }
+
+  @media (max-width: 900px) {
+    .diagram { grid-template-columns: 1fr; padding: 24px; }
+    .signals-col { flex-direction: row; flex-wrap: wrap; padding-top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="chip-icon">⚡</div>
+  <div>
+    <h1>SPI<span>Master</span>.sv — RTL Architecture</h1>
+    <div class="subtitle">Internal block diagram · Mode 0 · MSB first · 8-bit transfers</div>
+  </div>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--input-c)"></div>Input signals</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--output-c)"></div>Output signals</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--clk-c)"></div>Clock / timing</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--internal)"></div>Internal registers</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>FSM states</div>
+  <div class="legend-item" style="font-size:10px;color:var(--muted)">💡 Click any block for details</div>
+</div>
+
+<div class="diagram">
+
+  <!-- LEFT: Input signals -->
+  <div class="signals-col left">
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Inputs</div>
+
+    <div class="sig clk-sig">
+      i_Clk <span class="sig-arrow">→</span>
+      <div class="sig-desc">100 MHz system clock</div>
+    </div>
+    <div class="sig clk-sig">
+      i_Clk_en <span class="sig-arrow">→</span>
+      <div class="sig-desc">Clock enable gate</div>
+    </div>
+    <div class="sig clk-sig">
+      i_Rst_n <span class="sig-arrow">→</span>
+      <div class="sig-desc">Async active-low reset</div>
+    </div>
+    <div class="sig input-sig">
+      i_tx_ready <span class="sig-arrow">→</span>
+      <div class="sig-desc">Pulse: start a transfer</div>
+    </div>
+    <div class="sig input-sig">
+      i_tx_byte[7:0] <span class="sig-arrow">→</span>
+      <div class="sig-desc">Byte to send over MOSI</div>
+    </div>
+    <div class="sig spi-sig">
+      i_miso <span class="sig-arrow">→</span>
+      <div class="sig-desc">SPI bus input from slave</div>
+    </div>
+
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-top:16px;margin-bottom:4px;">Parameters</div>
+    <div class="sig" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);color:var(--warn);font-size:10px;">
+      DIVIDE_FREQ_SPI=1
+    </div>
+    <div class="sig" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);color:var(--warn);font-size:10px;">
+      MODE=0 (CPOL=0,CPHA=0)
+    </div>
+    <div class="sig" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);color:var(--warn);font-size:10px;">
+      FRAME_FORMAT=0 (MSB)
+    </div>
+    <div class="sig" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);color:var(--warn);font-size:10px;">
+      SS_PIN_ENABLE=1
+    </div>
+  </div>
+
+  <!-- CENTER: DUT -->
+  <div class="dut-wrapper">
+    <div class="dut-box">
+
+      <!-- FSM Block -->
+      <div class="block fsm" onclick="showDetail('fsm')">
+        <div class="block-title">🔄 Finite State Machine</div>
+        <div class="block-body">
+          Controls entire transfer lifecycle. Two always blocks:<br>
+          <code style="color:var(--accent3)">always_ff</code> updates state on clock edge &nbsp;|&nbsp;
+          <code style="color:var(--accent3)">always_comb</code> computes next_state
+        </div>
+        <div class="fsm-flow">
+          <span class="state-tag">IDLE</span>
+          <span class="fsm-arrow">→</span>
+          <span class="state-tag">PRE_COMM</span>
+          <span class="fsm-arrow">→</span>
+          <span class="state-tag">COMM</span>
+          <span class="fsm-arrow">→</span>
+          <span class="state-tag">POS_COMM</span>
+          <span class="fsm-arrow">→</span>
+          <span class="state-tag">IDLE</span>
+        </div>
+        <div class="block-body" style="margin-top:8px;">
+          Transition conditions:
+          IDLE→PRE_COMM: <span style="color:var(--input-c)">i_tx_ready=1</span> &nbsp;|&nbsp;
+          COMM→POS_COMM: <span style="color:var(--internal)">r_cycle_count≥8 &amp;&amp; r_edge_detect</span> &nbsp;|&nbsp;
+          POS_COMM→IDLE: <span style="color:var(--internal)">r_count_pos_com = DIVIDE_FREQ&gt;&gt;1</span>
+        </div>
+      </div>
+
+      <!-- CLK GEN Block -->
+      <div class="block clkgen" onclick="showDetail('clkgen')">
+        <div class="block-title">⏱ SCLK Generator</div>
+        <div class="block-body">
+          Counts FPGA clock edges to produce SCLK.<br><br>
+          <span class="reg-tag">r_cont_sclk</span> counts 0→DIVIDE_FREQ<br>
+          <span class="reg-tag">r_sclk</span> toggles when count hits limit<br>
+          <span class="reg-tag">r_edge_detect</span> pulses on each toggle<br><br>
+          Formula: <span style="color:var(--clk-c)">f_sclk = f_clk / 2(n+1)</span><br>
+          Active only in STATE_COMM
+        </div>
+      </div>
+
+      <!-- TX Buffer -->
+      <div class="block txbuf" onclick="showDetail('txbuf')">
+        <div class="block-title">📥 TX Shift Register</div>
+        <div class="block-body">
+          <span class="reg-tag">r_tx_byte</span> latches i_tx_byte when<br>
+          i_tx_ready=1 &amp;&amp; state=IDLE<br><br>
+          <span class="reg-tag">w_tx_byte</span> = r_tx_byte &lt;&lt; r_cycle_count<br>
+          (shifts out MSB first for FRAME_FORMAT=0)<br><br>
+          <span class="reg-tag">r_mosi</span> ← w_tx_byte[7] on each SCLK edge<br>
+          <span class="reg-tag">r_cycle_count</span> increments each bit sent
+        </div>
+      </div>
+
+      <!-- RX Buffer -->
+      <div class="block rxbuf" onclick="showDetail('rxbuf')">
+        <div class="block-title">📤 RX Shift Register</div>
+        <div class="block-body">
+          Samples i_miso on correct SCLK edge<br>
+          (posedge for Mode 0)<br><br>
+          <span class="reg-tag">r_rx_byte</span> ← {r_rx_byte[6:0], i_miso}<br>
+          shifts in LSB from MISO each clock<br><br>
+          On IDLE: <span class="reg-tag">o_rx_byte</span> ← r_rx_byte<br>
+          <span class="reg-tag">o_byte_ready</span> pulses for 1 cycle
+        </div>
+      </div>
+
+      <!-- MOSI Driver -->
+      <div class="block mosi" onclick="showDetail('mosi')">
+        <div class="block-title">➡ MOSI Driver</div>
+        <div class="block-body">
+          <span style="color:var(--accent3)">assign o_mosi = !r_ss ? r_mosi : 'z</span><br><br>
+          When SS=LOW (active): drives r_mosi<br>
+          When SS=HIGH (idle): HIGH-Z state<br><br>
+          Prevents bus contention in multi-master
+        </div>
+      </div>
+
+      <!-- SCLK Output -->
+      <div class="block sclk" onclick="showDetail('sclk')">
+        <div class="block-title">🕐 SCLK Output Logic</div>
+        <div class="block-body">
+          Adjusts r_sclk for CPOL setting:<br><br>
+          CPOL=0: <span style="color:var(--clk-c)">o_sclk = r_sclk</span> (idles LOW)<br>
+          CPOL=1: <span style="color:var(--clk-c)">o_sclk = !r_sclk</span> (idles HIGH)<br><br>
+          Active during STATE_COMM + STATE_POS_COMM
+        </div>
+      </div>
+
+      <!-- SS Controller -->
+      <div class="block ss" onclick="showDetail('ss')">
+        <div class="block-title">🔴 SS Controller</div>
+        <div class="block-body">
+          <span class="reg-tag">r_ss</span> register drives o_ss<br><br>
+          PRE_COMM → r_ss=0 (assert SS LOW)<br>
+          POS_COMM done → r_ss=1 (deassert)<br><br>
+          If SS_PIN_ENABLE=0: o_ss = 'z<br>
+          (user manages SS externally)
+        </div>
+      </div>
+
+      <!-- Mode select -->
+      <div class="block mode" onclick="showDetail('mode')">
+        <div class="block-title">⚙ SPI Mode Select (CPOL / CPHA Decoder)</div>
+        <div class="block-body" style="display:flex;gap:24px;flex-wrap:wrap;">
+          <div>
+            <span style="color:var(--warn)">MODE 0:</span> CPOL=0 CPHA=0 — sample rising, shift falling<br>
+            <span style="color:var(--warn)">MODE 1:</span> CPOL=0 CPHA=1 — sample falling, shift rising
+          </div>
+          <div>
+            <span style="color:var(--warn)">MODE 2:</span> CPOL=1 CPHA=0 — sample falling, shift rising<br>
+            <span style="color:var(--warn)">MODE 3:</span> CPOL=1 CPHA=1 — sample rising, shift falling
+          </div>
+        </div>
+      </div>
+
+      <!-- Internal bus -->
+      <div class="int-bus">
+        <span class="int-bus-label">Internal signals:</span>
+        <span class="reg-tag">r_ss</span>
+        <span class="reg-tag">r_mosi</span>
+        <span class="reg-tag">r_sclk</span>
+        <span class="reg-tag">r_tx_byte</span>
+        <span class="reg-tag">w_tx_byte</span>
+        <span class="reg-tag">r_rx_byte</span>
+        <span class="reg-tag">r_cycle_count</span>
+        <span class="reg-tag">r_cont_sclk</span>
+        <span class="reg-tag">r_edge_detect</span>
+        <span class="reg-tag">r_edge_detect_tmp</span>
+        <span class="reg-tag">r_count_pos_com</span>
+        <span class="reg-tag">w_CPOL</span>
+        <span class="reg-tag">w_CPHA</span>
+        <span class="reg-tag">w_Clk</span>
+        <span class="reg-tag">state</span>
+        <span class="reg-tag">next_state</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT: Output signals -->
+  <div class="signals-col right">
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Outputs</div>
+
+    <div class="sig output-sig">
+      <span class="sig-arrow">→</span> o_rx_byte[7:0]
+      <div class="sig-desc">Received byte (valid when o_byte_ready=1)</div>
+    </div>
+    <div class="sig output-sig">
+      <span class="sig-arrow">→</span> o_byte_ready
+      <div class="sig-desc">1-cycle pulse: rx_byte is valid</div>
+    </div>
+    <div class="sig output-sig">
+      <span class="sig-arrow">→</span> o_busy
+      <div class="sig-desc">HIGH while transfer in progress</div>
+    </div>
+    <div class="sig spi-sig">
+      <span class="sig-arrow">→</span> o_mosi
+      <div class="sig-desc">SPI bus — data to slave</div>
+    </div>
+    <div class="sig spi-sig">
+      <span class="sig-arrow">→</span> o_sclk
+      <div class="sig-desc">SPI bus — clock to slave</div>
+    </div>
+    <div class="sig spi-sig">
+      <span class="sig-arrow">→</span> o_ss
+      <div class="sig-desc">SPI bus — slave select (active LOW)</div>
+    </div>
+
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-top:16px;margin-bottom:4px;">o_busy logic</div>
+    <div style="font-size:10px;color:var(--muted);line-height:1.8;padding:10px;background:var(--surface);border-radius:6px;border:1px solid var(--border);">
+      HIGH when state ≠ IDLE<br>
+      LOW  when state = IDLE<br>
+      <span style="color:var(--accent)">Must check before</span><br>
+      <span style="color:var(--accent)">pulsing i_tx_ready</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Detail panel -->
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-title">
+    <span id="detailTitle">Block Details</span>
+    <span class="close-btn" onclick="closeDetail()">✕</span>
+  </div>
+  <div id="detailBody"></div>
+</div>
+
+<script>
+const details = {
+  fsm: {
+    title: '🔄 Finite State Machine — The Brain of SPIMaster',
+    body: `The FSM is implemented as two always blocks — a standard pattern called "two-process FSM".<br><br>
+<b>always_ff</b> (sequential): Updates <code>state ← next_state</code> on every posedge w_Clk. On reset: state ← STATE_IDLE.<br>
+<b>always_comb</b> (combinational): Computes next_state based on current state and input conditions. No clock dependency.<br><br>
+<b>Why two blocks?</b> Separating sequential (state register) from combinational (next-state logic) avoids latches and makes synthesis cleaner.<br><br>
+<div style="background:#0a0e1a;padding:10px;border-radius:6px;border-left:3px solid #00d4ff;font-size:11px;color:#10b981;">
+STATE_IDLE    → waits for i_tx_ready pulse<br>
+STATE_PRE_COMM → asserts SS LOW, loads first MOSI bit (1 cycle)<br>
+STATE_COMM    → transfers 8 bits, counts edges via r_cycle_count<br>
+STATE_POS_COMM → holds SS LOW briefly so slave can detect last edge
+</div>`
+  },
+  clkgen: {
+    title: '⏱ SCLK Generator — Frequency Divider',
+    body: `Divides the FPGA clock down to the SPI clock frequency.<br><br>
+<b>Formula:</b> f_sclk = f_clk / 2(DIVIDE_FREQUENCY_SPI + 1)<br>
+With DIVIDE_FREQUENCY_SPI=1 and f_clk=100MHz: f_sclk = 25MHz<br><br>
+<b>How it works:</b><br>
+r_cont_sclk counts from 0 to DIVIDE_FREQUENCY_SPI on each clock edge.<br>
+When it reaches the limit → r_sclk toggles (edge) → r_edge_detect pulses HIGH for 1 cycle.<br>
+r_edge_detect is the "permission signal" that tells TX and RX blocks when to act.<br><br>
+<div style="background:#0a0e1a;padding:10px;border-radius:6px;border-left:3px solid #f59e0b;font-size:11px;color:#10b981;">
+r_cont_sclk: 0→1 → toggle r_sclk, set r_edge_detect=1<br>
+r_cont_sclk: reset → r_edge_detect=0<br>
+Only active when state = STATE_COMM
+</div>`
+  },
+  txbuf: {
+    title: '📥 TX Shift Register — Serializer',
+    body: `Converts a parallel 8-bit byte into a serial bit stream on MOSI.<br><br>
+<b>Step 1 — Latch:</b> When i_tx_ready=1 AND state=IDLE, r_tx_byte ← i_tx_byte. This is a registered (buffered) copy so the input can change safely during transfer.<br><br>
+<b>Step 2 — Shift:</b> w_tx_byte = r_tx_byte &lt;&lt; r_cycle_count. This is combinational — it presents the correct bit at w_tx_byte[7] at all times without actually destroying r_tx_byte.<br><br>
+<b>Step 3 — Drive:</b> r_mosi ← w_tx_byte[7] on each SCLK falling edge (CPHA=0). r_cycle_count increments each time, advancing the shift.<br><br>
+<div style="background:#0a0e1a;padding:10px;border-radius:6px;border-left:3px solid #00d4ff;font-size:11px;color:#10b981;">
+PRE_COMM: load first bit (bit 7) before SCLK starts<br>
+COMM: shift one bit per SCLK falling edge<br>
+After 8 bits: r_cycle_count=8, FSM exits COMM
+</div>`
+  },
+  rxbuf: {
+    title: '📤 RX Shift Register — Deserializer',
+    body: `Converts the serial MISO input back into a parallel 8-bit byte.<br><br>
+<b>Sampling edge:</b> For Mode 0 (CPOL=0, CPHA=0), data is sampled on the RISING edge of SCLK. The code checks: o_sclk=HIGH AND r_edge_detect_tmp=1.<br><br>
+<b>Why r_edge_detect_tmp?</b> It's r_edge_detect delayed by one clock. This ensures sampling happens after o_sclk has settled, avoiding metastability.<br><br>
+<b>Shift operation:</b> r_rx_byte ← {r_rx_byte[6:0], i_miso} — shifts in LSB from MISO, building the byte MSB first.<br><br>
+<b>Output:</b> When FSM returns to IDLE and o_busy was HIGH (transition), o_rx_byte ← r_rx_byte and o_byte_ready pulses for exactly 1 clock cycle.<br><br>
+<div style="background:#0a0e1a;padding:10px;border-radius:6px;border-left:3px solid #10b981;font-size:11px;color:#10b981;">
+Bit 7 received first → stored in r_rx_byte[0] initially<br>
+After 8 shifts → r_rx_byte holds complete byte<br>
+o_byte_ready = 1 only when state=IDLE AND o_busy was 1
+</div>`
+  },
+  mosi: {
+    title: '➡ MOSI Driver — Tri-state Control',
+    body: `Controls whether MOSI drives a value or floats to high-impedance (Z).<br><br>
+<b>assign o_mosi = !r_ss ? r_mosi : 'z</b><br><br>
+When r_ss=0 (SS asserted, transfer active): o_mosi = r_mosi (drives the bit)<br>
+When r_ss=1 (SS deasserted, idle): o_mosi = 'z (high-impedance, releases the bus)<br><br>
+<b>Why high-Z?</b> In a multi-master system, only the active master should drive MOSI. Releasing to Z prevents bus contention when this master is idle.<br><br>
+<div style="background:#0a0e1a;padding:10px;border-radius:6px;border-left:3px solid #7c3aed;font-size:11px;color:#10b981;">
+This is a combinational assign — no clock needed.<br>
+r_ss is the internal register that mirrors o_ss (delayed by 1 FF).
+</div>`
+  },
+  sclk: {
+    title: '🕐 SCLK Output Logic — CPOL Adjustment',
+    body: `Applies the CPOL (Clock Polarity) setting to produce the correct idle state for SCLK.<br><br>
+<b>CPOL=0 (Mode 0, Mode 1):</b> SCLK idles LOW. o_sclk = r_sclk during transfer, 0 when idle.<br>
+<b>CPOL=1 (Mode 2, Mode 3):</b> SCLK idles HIGH. o_sclk = !r_sclk during transfer, 1 when idle.<br><br>
+r_sclk always starts at 0 on reset. The CPOL inversion is applied at the OUTPUT stage only — the internal logic always works with r_sclk starting at 0.<br><br>
+<div style="background:#0a0e1a;padding:10px;border-radius:6px;border-left:3px solid #f59e0b;font-size:11px;color:#10b981;">
+Active during: STATE_COMM and STATE_POS_COMM<br>
+Idle during:   STATE_IDLE and STATE_PRE_COMM<br>
+Your TB uses CPOL=0 → o_sclk idles LOW ✓
+</div>`
+  },
+  ss: {
+    title: '🔴 SS (Slave Select) Controller',
+    body: `Controls the Slave Select signal which activates/deactivates the slave.<br><br>
+<b>r_ss register:</b><br>
+Reset value: 1 (deasserted — no slave selected)<br>
+STATE_PRE_COMM: r_ss ← 0 (assert SS LOW — slave activated)<br>
+STATE_POS_COMM end: r_ss ← 1 (deassert SS HIGH — slave released)<br><br>
+<b>Why PRE_COMM?</b> SS must go LOW before SCLK starts. PRE_COMM is a 1-cycle "setup" state that asserts SS and loads the first MOSI bit before COMM begins.<br><br>
+<b>Why POS_COMM?</b> SS must stay LOW for a brief hold time after the last SCLK edge so the slave can latch the final bit. POS_COMM counts DIVIDE_FREQ/2 extra cycles.<br><br>
+<div style="background:#0a0e1a;padding:10px;border-radius:6px;border-left:3px solid #ef4444;font-size:11px;color:#10b981;">
+SS_PIN_ENABLE=1 → o_ss = r_ss (module drives SS)<br>
+SS_PIN_ENABLE=0 → o_ss = 'z  (user drives SS externally)
+</div>`
+  },
+  mode: {
+    title: '⚙ SPI Mode Decoder — CPOL/CPHA',
+    body: `Decodes the MODE parameter into CPOL and CPHA control signals used throughout the module.<br><br>
+<b>CPOL</b> (Clock Polarity): defines the idle state of SCLK<br>
+<b>CPHA</b> (Clock Phase): defines which edge data is sampled vs shifted<br><br>
+<table style="font-size:11px;border-collapse:collapse;width:100%">
+<tr style="color:#64748b"><td style="padding:4px 8px">Mode</td><td style="padding:4px 8px">CPOL</td><td style="padding:4px 8px">CPHA</td><td style="padding:4px 8px">Sample on</td><td style="padding:4px 8px">Shift on</td></tr>
+<tr style="color:#10b981"><td style="padding:4px 8px">0</td><td style="padding:4px 8px">0</td><td style="padding:4px 8px">0</td><td style="padding:4px 8px">Rising ↑</td><td style="padding:4px 8px">Falling ↓</td></tr>
+<tr style="color:#64748b"><td style="padding:4px 8px">1</td><td style="padding:4px 8px">0</td><td style="padding:4px 8px">1</td><td style="padding:4px 8px">Falling ↓</td><td style="padding:4px 8px">Rising ↑</td></tr>
+<tr style="color:#64748b"><td style="padding:4px 8px">2</td><td style="padding:4px 8px">1</td><td style="padding:4px 8px">0</td><td style="padding:4px 8px">Falling ↓</td><td style="padding:4px 8px">Rising ↑</td></tr>
+<tr style="color:#64748b"><td style="padding:4px 8px">3</td><td style="padding:4px 8px">1</td><td style="padding:4px 8px">1</td><td style="padding:4px 8px">Rising ↑</td><td style="padding:4px 8px">Falling ↓</td></tr>
+</table><br>
+Your testbench uses <span style="color:#00d4ff">MODE=0</span> — the most common SPI mode.`
+  }
+};
+
+function showDetail(key) {
+  const panel = document.getElementById('detailPanel');
+  document.getElementById('detailTitle').innerHTML = details[key].title;
+  document.getElementById('detailBody').innerHTML = details[key].body;
+  panel.classList.add('visible');
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('visible');
+}
+
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeDetail(); });
+</script>
+</body>
+</html>

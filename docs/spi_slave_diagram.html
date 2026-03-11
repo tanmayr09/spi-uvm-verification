@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>spiSlave RTL Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg:       #0a1a0e;
+    --surface:  #111f14;
+    --border:   #1e3a24;
+    --accent:   #10b981;
+    --accent2:  #7c3aed;
+    --accent3:  #00d4ff;
+    --warn:     #f59e0b;
+    --danger:   #ef4444;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --input-c:  #00d4ff;
+    --output-c: #10b981;
+    --internal: #7c3aed;
+    --clk-c:    #f59e0b;
+    --spi-c:    #10b981;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(16,185,129,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(16,185,129,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  header {
+    padding: 32px 48px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .chip-icon {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  h1 span { color: var(--accent); }
+  .subtitle {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .legend {
+    display: flex;
+    gap: 24px;
+    padding: 16px 48px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  .diagram {
+    display: grid;
+    grid-template-columns: 180px 1fr 180px;
+    gap: 0;
+    padding: 48px;
+    min-height: calc(100vh - 140px);
+    align-items: start;
+  }
+
+  .signals-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 60px;
+  }
+
+  .sig {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .sig:hover { transform: translateX(3px); }
+  .sig.input-sig  { background: rgba(0,212,255,0.08);  border: 1px solid rgba(0,212,255,0.3);  color: var(--input-c); }
+  .sig.output-sig { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); color: var(--output-c); }
+  .sig.clk-sig    { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); color: var(--clk-c); }
+  .sig.spi-sig    { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.4); color: var(--spi-c); }
+
+  .sig-arrow { margin-left: auto; font-size: 14px; opacity: 0.6; }
+
+  .sig-desc {
+    display: none;
+    position: absolute;
+    left: 105%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    color: var(--text);
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  .signals-col.right .sig-desc { left: auto; right: 105%; }
+  .sig:hover .sig-desc { display: block; }
+
+  .dut-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+  }
+
+  .dut-box {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    position: relative;
+  }
+
+  .dut-box::before {
+    content: 'spiSlave.sv';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg);
+    padding: 0 16px;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  .block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    transition: all 0.25s;
+    cursor: pointer;
+  }
+
+  .block:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(16,185,129,0.1);
+    transform: translateY(-2px);
+  }
+
+  .block.reg     { border-top: 3px solid var(--input-c);  grid-column: 1 / -1; }
+  .block.sclk    { border-top: 3px solid var(--clk-c); }
+  .block.ss      { border-top: 3px solid var(--danger); }
+  .block.txshift { border-top: 3px solid var(--accent); }
+  .block.rxshift { border-top: 3px solid var(--input-c); }
+  .block.miso    { border-top: 3px solid var(--accent2); }
+  .block.busy    { border-top: 3px solid var(--warn); }
+  .block.out     { border-top: 3px solid var(--accent); grid-column: 1 / -1; }
+  .block.mode    { border-top: 3px solid var(--warn);    grid-column: 1 / -1; }
+  .block.gen     { border-top: 3px solid var(--accent3); grid-column: 1 / -1; }
+
+  .block-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .block.reg     .block-title { color: var(--input-c); }
+  .block.sclk    .block-title { color: var(--clk-c); }
+  .block.ss      .block-title { color: var(--danger); }
+  .block.txshift .block-title { color: var(--accent); }
+  .block.rxshift .block-title { color: var(--input-c); }
+  .block.miso    .block-title { color: var(--accent2); }
+  .block.busy    .block-title { color: var(--warn); }
+  .block.out     .block-title { color: var(--accent); }
+  .block.mode    .block-title { color: var(--warn); }
+  .block.gen     .block-title { color: var(--accent3); }
+
+  .block-body {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  .reg-tag {
+    display: inline-block;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.3);
+    color: var(--internal);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    margin: 1px;
+    font-weight: 600;
+  }
+
+  .int-bus {
+    grid-column: 1 / -1;
+    background: rgba(124,58,237,0.05);
+    border: 1px dashed rgba(124,58,237,0.3);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 10px;
+    color: var(--internal);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .int-bus-label {
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 8px;
+  }
+
+  /* Key difference callout */
+  .callout {
+    grid-column: 1 / -1;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 11px;
+    color: #fca5a5;
+    line-height: 1.7;
+  }
+
+  .callout strong { color: #ef4444; }
+
+  .detail-panel {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 20px 28px;
+    max-width: 700px;
+    width: calc(100% - 48px);
+    box-shadow: 0 0 40px rgba(16,185,129,0.15);
+    display: none;
+    z-index: 200;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  .detail-panel.visible { display: block; }
+
+  .detail-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .close-btn { cursor: pointer; color: var(--muted); font-size: 18px; line-height: 1; }
+  .close-btn:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="chip-icon">📡</div>
+  <div>
+    <h1>spi<span>Slave</span>.sv — RTL Architecture</h1>
+    <div class="subtitle">Internal block diagram · Mode 0 · MSB first · 8-bit transfers · SCLK-domain RX</div>
+  </div>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--input-c)"></div>Input signals</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--output-c)"></div>Output signals</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--clk-c)"></div>Clock / timing</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--internal)"></div>Internal registers</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ef4444)"></div>Key difference vs master</div>
+  <div class="legend-item" style="font-size:10px;color:var(--muted)">💡 Click any block for details</div>
+</div>
+
+<div class="diagram">
+
+  <!-- LEFT: Inputs -->
+  <div class="signals-col left">
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Inputs</div>
+
+    <div class="sig clk-sig">
+      i_Clk <span class="sig-arrow">→</span>
+      <div class="sig-desc">100 MHz FPGA system clock</div>
+    </div>
+    <div class="sig clk-sig">
+      i_Clk_en <span class="sig-arrow">→</span>
+      <div class="sig-desc">Clock enable gate</div>
+    </div>
+    <div class="sig clk-sig">
+      i_Rst_n <span class="sig-arrow">→</span>
+      <div class="sig-desc">Async active-low reset</div>
+    </div>
+    <div class="sig input-sig">
+      i_tx_ready <span class="sig-arrow">→</span>
+      <div class="sig-desc">Pulse: preload TX buffer</div>
+    </div>
+    <div class="sig input-sig">
+      i_tx_byte[7:0] <span class="sig-arrow">→</span>
+      <div class="sig-desc">Byte slave will send over MISO</div>
+    </div>
+
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-top:12px;margin-bottom:4px;">SPI Bus Inputs</div>
+
+    <div class="sig spi-sig">
+      i_mosi <span class="sig-arrow">→</span>
+      <div class="sig-desc">Data in from master</div>
+    </div>
+    <div class="sig spi-sig">
+      i_sclk <span class="sig-arrow">→</span>
+      <div class="sig-desc">Clock from master</div>
+    </div>
+    <div class="sig spi-sig">
+      i_ss <span class="sig-arrow">→</span>
+      <div class="sig-desc">Slave select (active LOW)</div>
+    </div>
+
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-top:16px;margin-bottom:4px;">Parameters</div>
+    <div class="sig" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);color:var(--warn);font-size:10px;">
+      MODE=0 (CPOL=0,CPHA=0)
+    </div>
+    <div class="sig" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);color:var(--warn);font-size:10px;">
+      FRAME_FORMAT=0 (MSB)
+    </div>
+  </div>
+
+  <!-- CENTER: DUT -->
+  <div class="dut-wrapper">
+    <div class="dut-box">
+
+      <!-- Key difference callout -->
+      <div class="callout">
+        <strong>⚠ Key architectural difference vs SPIMaster:</strong>
+        The slave has <strong>no internal clock generator</strong> — it uses the master's SCLK directly.
+        The RX and TX cycle-count blocks are clocked by <strong>i_sclk edges</strong>, not the FPGA clock.
+        This means two clock domains exist inside this module: <strong>w_Clk domain</strong> (FPGA) and <strong>w_sclk domain</strong> (SPI).
+        The registered i_mosi/i_sclk/i_ss signals cross from the SPI domain back to the FPGA domain safely.
+      </div>
+
+      <!-- Input Registration Block -->
+      <div class="block reg" onclick="showDetail('reg')">
+        <div class="block-title">🔒 SPI Input Registration (CDC)</div>
+        <div class="block-body">
+          Registers all SPI bus inputs on FPGA clock to prevent metastability.<br><br>
+          <span class="reg-tag">r_mosi</span> ← i_mosi &nbsp;|&nbsp;
+          <span class="reg-tag">r_sclk</span> ← i_sclk &nbsp;|&nbsp;
+          <span class="reg-tag">r_ss</span> ← i_ss (reset=1)<br><br>
+          <span style="color:#ef4444">Critical: r_ss resets to 1'b1 (deasserted) not 0</span> — slave starts deselected.<br>
+          This was one of the RTL bugs that was already fixed in your project.
+        </div>
+      </div>
+
+      <!-- SCLK polarity -->
+      <div class="block sclk" onclick="showDetail('sclk')">
+        <div class="block-title">⏱ SCLK Polarity Adjust</div>
+        <div class="block-body">
+          <span style="color:#10b981">assign w_sclk = w_CPOL ? !r_sclk : r_sclk</span><br><br>
+          Adjusts registered SCLK for CPOL setting.<br>
+          w_sclk is used as the clock edge for all generate blocks.<br><br>
+          CPOL=0: w_sclk = r_sclk (no inversion)<br>
+          CPOL=1: w_sclk = !r_sclk (inverted)
+        </div>
+      </div>
+
+      <!-- SS / busy -->
+      <div class="block ss" onclick="showDetail('ss')">
+        <div class="block-title">🔴 SS Detector + Busy</div>
+        <div class="block-body">
+          <span class="reg-tag">r_ss</span> directly controls busy state.<br><br>
+          <span style="color:#10b981">o_busy = !r_ss</span> (combinational)<br><br>
+          r_ss=0 → busy=1 (transfer active)<br>
+          r_ss=1 → busy=0 (idle)<br><br>
+          No FSM needed — SS itself IS the state signal for the slave.
+        </div>
+      </div>
+
+      <!-- TX Shift Register -->
+      <div class="block txshift" onclick="showDetail('txshift')">
+        <div class="block-title">📥 TX Shift Register</div>
+        <div class="block-body">
+          <span class="reg-tag">r_tx_byte</span> latches i_tx_byte when<br>
+          i_tx_ready=1 AND r_ss=1 (must preload BEFORE transfer)<br><br>
+          <span class="reg-tag">w_tx_byte</span> = r_tx_byte &lt;&lt; r_cycle_count<br>
+          (combinational shift — always shows correct bit)<br><br>
+          <span class="reg-tag">w_miso</span> = w_tx_byte[7] (MSB first)<br><br>
+          <span style="color:#f59e0b">r_cycle_count is clocked by w_sclk edges — not FPGA clock!</span>
+        </div>
+      </div>
+
+      <!-- RX Shift Register -->
+      <div class="block rxshift" onclick="showDetail('rxshift')">
+        <div class="block-title">📤 RX Shift Register</div>
+        <div class="block-body">
+          Clocked by <span style="color:#00d4ff">posedge w_sclk</span> (Mode 0/2)<br>
+          or <span style="color:#00d4ff">negedge w_sclk</span> (Mode 1/3)<br><br>
+          <span class="reg-tag">r_rx_byte</span> ← {r_rx_byte[6:0], r_mosi}<br>
+          Shifts in MSB first from registered MOSI<br><br>
+          Uses <span style="color:#10b981">generate</span> block to select edge at compile time based on MODE parameter — not runtime logic.
+        </div>
+      </div>
+
+      <!-- MISO output -->
+      <div class="block miso" onclick="showDetail('miso')">
+        <div class="block-title">➡ MISO Output</div>
+        <div class="block-body">
+          <span style="color:#10b981">assign o_miso = r_ss ? 'z : w_miso</span><br><br>
+          r_ss=1 (idle): MISO = high-Z (bus released)<br>
+          r_ss=0 (active): MISO = w_miso (drives data)<br><br>
+          This is the OPPOSITE polarity from MOSI in master — slave releases when NOT selected.
+        </div>
+      </div>
+
+      <!-- Generate block -->
+      <div class="block gen" onclick="showDetail('gen')">
+        <div class="block-title">⚙ Generate Blocks — Compile-time Mode Selection</div>
+        <div class="block-body" style="display:flex;gap:24px;flex-wrap:wrap;">
+          <div>
+            <span style="color:#00d4ff">Cycle counter generate:</span><br>
+            MODE 0/2: negedge w_sclk → increment r_cycle_count<br>
+            MODE 1/3: posedge w_sclk → increment r_cycle_count<br>
+            (reset on posedge r_ss)
+          </div>
+          <div>
+            <span style="color:#00d4ff">RX shift generate:</span><br>
+            MODE 0/2: posedge w_sclk → shift r_rx_byte<br>
+            MODE 1/3: negedge w_sclk → shift r_rx_byte<br>
+            (reset on negedge i_Rst_n)
+          </div>
+        </div>
+      </div>
+
+      <!-- Output block -->
+      <div class="block out" onclick="showDetail('out')">
+        <div class="block-title">✅ Output Stage — o_rx_byte + o_byte_ready</div>
+        <div class="block-body">
+          Triggered when: <span style="color:#10b981">r_ss=1 AND o_busy=1</span> (SS just went HIGH = transfer just ended)<br><br>
+          o_rx_byte ← r_rx_byte &nbsp;|&nbsp; o_byte_ready ← 1 for exactly 1 FPGA clock cycle<br><br>
+          Next cycle: o_byte_ready ← 0<br><br>
+          <span style="color:#f59e0b">This is clocked on FPGA clock (w_Clk), not SPI clock — safe to read from FPGA logic.</span>
+        </div>
+      </div>
+
+      <!-- Mode block -->
+      <div class="block mode" onclick="showDetail('mode')">
+        <div class="block-title">⚙ SPI Mode Decoder (CPOL / CPHA) — same as master</div>
+        <div class="block-body" style="display:flex;gap:24px;flex-wrap:wrap;">
+          <div>MODE 0: CPOL=0, CPHA=0 — w_sclk idles LOW, sample rising ↑</div>
+          <div>MODE 1: CPOL=0, CPHA=1 — w_sclk idles LOW, sample falling ↓</div>
+          <div>MODE 2: CPOL=1, CPHA=0 — w_sclk idles HIGH, sample falling ↓</div>
+          <div>MODE 3: CPOL=1, CPHA=1 — w_sclk idles HIGH, sample rising ↑</div>
+        </div>
+      </div>
+
+      <!-- Internal bus -->
+      <div class="int-bus">
+        <span class="int-bus-label">Internal signals:</span>
+        <span class="reg-tag">r_ss</span>
+        <span class="reg-tag">r_mosi</span>
+        <span class="reg-tag">r_sclk</span>
+        <span class="reg-tag">w_sclk</span>
+        <span class="reg-tag">w_miso</span>
+        <span class="reg-tag">r_tx_byte</span>
+        <span class="reg-tag">w_tx_byte</span>
+        <span class="reg-tag">r_rx_byte</span>
+        <span class="reg-tag">r_cycle_count</span>
+        <span class="reg-tag">w_CPOL</span>
+        <span class="reg-tag">w_CPHA</span>
+        <span class="reg-tag">w_Clk</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT: Outputs -->
+  <div class="signals-col right">
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Outputs</div>
+
+    <div class="sig output-sig">
+      <span class="sig-arrow">→</span> o_rx_byte[7:0]
+      <div class="sig-desc">Received byte (valid when o_byte_ready=1)</div>
+    </div>
+    <div class="sig output-sig">
+      <span class="sig-arrow">→</span> o_byte_ready
+      <div class="sig-desc">1-cycle pulse: rx_byte is valid</div>
+    </div>
+    <div class="sig output-sig">
+      <span class="sig-arrow">→</span> o_busy
+      <div class="sig-desc">HIGH while SS is LOW (transfer active)</div>
+    </div>
+    <div class="sig spi-sig">
+      <span class="sig-arrow">→</span> o_miso
+      <div class="sig-desc">SPI bus — data back to master</div>
+    </div>
+
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-top:16px;margin-bottom:4px;">vs Master</div>
+    <div style="font-size:10px;color:var(--muted);line-height:2;padding:10px;background:var(--surface);border-radius:6px;border:1px solid var(--border);">
+      <span style="color:#ef4444">No FSM</span> — SS is the state<br>
+      <span style="color:#ef4444">No SCLK gen</span> — uses master's<br>
+      <span style="color:#ef4444">2 clock domains</span> — FPGA + SPI<br>
+      <span style="color:#10b981">TX preload</span> before SS goes low<br>
+      <span style="color:#10b981">generate</span> for mode selection
+    </div>
+  </div>
+
+</div>
+
+<!-- Detail panel -->
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-title">
+    <span id="detailTitle">Block Details</span>
+    <span class="close-btn" onclick="closeDetail()">✕</span>
+  </div>
+  <div id="detailBody"></div>
+</div>
+
+<script>
+const details = {
+  reg: {
+    title: '🔒 SPI Input Registration — Clock Domain Crossing',
+    body: `All SPI bus signals (i_mosi, i_sclk, i_ss) come from the MASTER which runs on its own clock. The FPGA slave logic runs on w_Clk. These are potentially different clock domains — registering the inputs prevents metastability.<br><br>
+<b>always_ff @(posedge w_Clk):</b><br>
+r_mosi ← i_mosi<br>
+r_sclk ← i_sclk<br>
+r_ss   ← i_ss (reset = 1'b1)<br><br>
+<b>The reset=1'b1 bug fix:</b> The original code had r_ss resetting to 0 (selected) which meant the slave thought it was in an active transfer at reset. Fixed to 1 (deselected) so slave starts in idle state.<br><br>
+<div style="background:#0a1a0e;padding:10px;border-radius:6px;border-left:3px solid #00d4ff;font-size:11px;color:#10b981;">
+Note: This registration adds 1 FPGA clock of latency to all SPI signals.<br>
+This is why the FPGA clock must be ≥ 4× the SPI clock frequency.
+</div>`
+  },
+  sclk: {
+    title: '⏱ SCLK Polarity — w_sclk Signal',
+    body: `Unlike the master which GENERATES SCLK, the slave RECEIVES it and adjusts for polarity.<br><br>
+<b>assign w_sclk = w_CPOL ? !r_sclk : r_sclk</b><br><br>
+This produces a normalized clock where:<br>
+- The first edge is always a rising edge regardless of CPOL<br>
+- All generate blocks use w_sclk so they don't need to know about CPOL<br><br>
+CPOL=0 (your testbench): w_sclk = r_sclk (no inversion needed)<br>
+CPOL=1: w_sclk = !r_sclk (inverts so rising edge becomes the active edge)<br><br>
+<div style="background:#0a1a0e;padding:10px;border-radius:6px;border-left:3px solid #f59e0b;font-size:11px;color:#10b981;">
+w_sclk is used as the actual clock signal in the generate blocks' always_ff sensitivity lists.<br>
+This is legal SystemVerilog — you can clock a flip-flop on any logic signal.
+</div>`
+  },
+  ss: {
+    title: '🔴 SS Detector — No FSM Needed',
+    body: `The slave has NO FSM. This is a fundamental architectural difference from the master.<br><br>
+<b>Why no FSM?</b> The slave is reactive — it doesn't initiate anything. Its entire lifecycle is controlled by the master via SS and SCLK. SS going low = start, SS going high = end. That's all the "state" the slave needs.<br><br>
+<b>o_busy = !r_ss</b> — this is a direct combinational assignment. Busy is simply "SS is asserted."<br><br>
+<b>TX buffer gating:</b> i_tx_ready is only accepted when r_ss=1 (idle). This prevents the TX buffer from being overwritten mid-transfer.<br><br>
+<div style="background:#0a1a0e;padding:10px;border-radius:6px;border-left:3px solid #ef4444;font-size:11px;color:#10b981;">
+Master FSM: 4 states, sequential logic, controls everything<br>
+Slave "FSM": just r_ss — 1 bit, two states (idle/active)
+</div>`
+  },
+  txshift: {
+    title: '📥 TX Shift Register — Preload Critical Timing',
+    body: `The slave TX path has a critical timing constraint: <b>the TX buffer MUST be loaded before SS goes LOW.</b><br><br>
+<b>Why?</b> The slave starts shifting MISO on the very first SCLK edge. If the buffer isn't loaded yet, the slave sends garbage on MISO for the first few bits.<br><br>
+<b>How your TB handles this:</b> The slave driver preloads slave_tx_byte BEFORE the master driver fires tx_ready. This is the fork/join pattern in the test:<br><br>
+<div style="background:#0a1a0e;padding:10px;border-radius:6px;border-left:3px solid #10b981;font-size:11px;color:#10b981;">
+fork<br>
+&nbsp;&nbsp;slave_seq.start(...)   ← preloads first<br>
+&nbsp;&nbsp;begin<br>
+&nbsp;&nbsp;&nbsp;&nbsp;#50;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;master_seq.start(...)  ← starts after 50ns delay<br>
+&nbsp;&nbsp;end<br>
+join
+</div><br>
+The r_cycle_count advances on SCLK edges (not FPGA clock), so the shift happens in the SPI clock domain.`
+  },
+  rxshift: {
+    title: '📤 RX Shift Register — SCLK Domain',
+    body: `The RX shift register is clocked by w_sclk — the SPI clock — not the FPGA clock.<br><br>
+<b>For Mode 0 (your testbench):</b><br>
+always_ff @(posedge w_sclk) — samples r_mosi on rising edge of SPI clock<br>
+r_rx_byte ← {r_rx_byte[6:0], r_mosi}<br><br>
+<b>For Mode 1/3:</b> always_ff @(negedge w_sclk) instead.<br><br>
+<b>generate block:</b> The mode selection is done at compile time using SystemVerilog generate. This means there is NO runtime mux — the synthesizer picks the right clock edge for the target mode and hardwires it. More efficient than an if/else at runtime.<br><br>
+<div style="background:#0a1a0e;padding:10px;border-radius:6px;border-left:3px solid #00d4ff;font-size:11px;color:#10b981;">
+r_mosi is the REGISTERED version of i_mosi (1 FPGA clock delayed).<br>
+This is safe because FPGA clock ≥ 4× SPI clock — signal is stable by the time SPI edge arrives.
+</div>`
+  },
+  miso: {
+    title: '➡ MISO Output — Tri-state when Deselected',
+    body: `<b>assign o_miso = r_ss ? 'z : w_miso</b><br><br>
+r_ss=1 (SS HIGH, slave deselected): o_miso = high-Z<br>
+r_ss=0 (SS LOW, slave selected):    o_miso = w_miso<br><br>
+<b>Note the polarity vs master MOSI:</b><br>
+Master: drives when r_ss=0 (active low SS)<br>
+Slave:  same — drives when r_ss=0, releases when r_ss=1<br><br>
+w_miso is w_tx_byte[7] — always the current MSB of the shifted TX byte. Since w_tx_byte is combinational (r_tx_byte &lt;&lt; r_cycle_count), MISO updates automatically as r_cycle_count increments on each SCLK edge.<br><br>
+<div style="background:#0a1a0e;padding:10px;border-radius:6px;border-left:3px solid #7c3aed;font-size:11px;color:#10b981;">
+The w_miso = always_comb bug fix: original code used <=  (non-blocking)<br>
+in an always_comb block which is illegal. Fixed to = (blocking).
+</div>`
+  },
+  gen: {
+    title: '⚙ Generate Blocks — Compile-time Clock Edge Selection',
+    body: `The slave uses SystemVerilog <code>generate</code> to select the correct SCLK edge at COMPILE TIME based on the MODE parameter.<br><br>
+<b>Two generate blocks, each covering two sub-cases:</b><br><br>
+<b>Generate 1 — Cycle counter (r_cycle_count):</b><br>
+MODE 0/2: negedge w_sclk → counter increments (counts falling edges)<br>
+MODE 1/3: posedge w_sclk → counter increments (counts rising edges)<br>
+Reset condition: posedge r_ss (SS goes high = reset counter for next transfer)<br><br>
+<b>Generate 2 — RX shift register (r_rx_byte):</b><br>
+MODE 0/2: posedge w_sclk → shift in r_mosi<br>
+MODE 1/3: negedge w_sclk → shift in r_mosi<br><br>
+<b>Why generate instead of if/else?</b><br>
+If you used runtime if/else, the synthesizer creates a mux and both clock paths exist in hardware. With generate, only ONE path is synthesized — no mux, no extra logic, cleaner timing.`
+  },
+  out: {
+    title: '✅ Output Stage — Back to FPGA Clock Domain',
+    body: `After the transfer completes (r_ss goes HIGH), the received byte needs to be presented to the FPGA logic safely.<br><br>
+<b>Trigger condition:</b> r_ss=1 AND o_busy=1<br>
+This means "SS just went HIGH and we WERE busy" — exactly one cycle where this is true, then o_busy drops to 0.<br><br>
+<b>What happens:</b><br>
+o_rx_byte ← r_rx_byte  (transfer the SPI-domain data to FPGA-domain output)<br>
+o_byte_ready ← 1       (pulse for exactly 1 FPGA clock cycle)<br>
+Next cycle: o_byte_ready ← 0<br><br>
+<b>Why is this clocked on w_Clk (FPGA clock)?</b><br>
+r_rx_byte was written in the SPI clock domain. By waiting for SS to rise (which is synchronized back to the FPGA clock via r_ss registration), we create a safe handshake point to move data from SPI domain to FPGA domain.<br><br>
+<div style="background:#0a1a0e;padding:10px;border-radius:6px;border-left:3px solid #10b981;font-size:11px;color:#10b981;">
+This is a simple form of Clock Domain Crossing (CDC) handshaking.<br>
+Your scoreboard waits for slave_byte_ready before sampling slave_rx_byte ✓
+</div>`
+  }
+};
+
+function showDetail(key) {
+  const panel = document.getElementById('detailPanel');
+  document.getElementById('detailTitle').innerHTML = details[key].title;
+  document.getElementById('detailBody').innerHTML = details[key].body;
+  panel.classList.add('visible');
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('visible');
+}
+
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeDetail(); });
+</script>
+</body>
+</html>
