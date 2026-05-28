@@ -1,0 +1,14 @@
+[options]
+mode bmc
+depth 80
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+read -formal spi_slave_formal.sv
+prep -top spiSlave
+clk2fflogic
+
+[files]
+spi_slave_formal.sv

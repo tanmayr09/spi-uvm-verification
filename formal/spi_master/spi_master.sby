@@ -1,0 +1,76 @@
+# ==============================================================================
+# File : spi.sby
+# Project : SPI Master Formal Verification
+# Tool : SymbiYosys (OSS CAD Suite)
+# ==============================================================================
+#
+# HOW TO RUN:
+#   source ~/tools/oss-cad-suite/environment
+#   cd ~/projects/formal_learning/spi/
+#   sby -f spi.sby
+#
+# OUTPUT:
+#   BMC  PASS  -> "DONE (PASS)"  — no assertion violated within depth cycles
+#   BMC  FAIL  -> "DONE (FAIL)"  — counterexample trace written to
+#                                  spi/engine_0/trace.vcd  (open in GTKWave)
+#   COVER PASS -> witness trace  — shortest path to cover condition written
+#                                  to spi/engine_0/trace0.vcd
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# [options]
+# mode bmc    : Bounded Model Checking
+#               Tries to FALSIFY every assert within `depth` clock cycles.
+#               PASS means no bug found within that bound — not a complete proof.
+#
+# depth 80    : Check up to 80 solver steps.
+#               With clk2fflogic, each w_Clk cycle = 2 solver steps
+#               (one for i_Clk low, one for i_Clk high). Minimum steps
+#               for a complete 8-bit transfer at DIVIDE_FREQUENCY_SPI=1:
+#                 - ~4  steps : reset + tx_ready pulse
+#                 - ~2  steps : PRE_COMM
+#                 - ~32 steps : COMM (8 bits x 2 edges x 2 solver steps)
+#                 - ~2  steps : POS_COMM
+#               Total ~40 steps minimum. 80 gives comfortable margin.
+# ------------------------------------------------------------------------------
+[options]
+mode bmc
+depth 80
+
+# ------------------------------------------------------------------------------
+# [engines]
+# smtbmc bitwuzla : Use the SMT-BMC engine with Bitwuzla as the solver.
+#                   Bitwuzla is the correct solver name in current OSS CAD Suite
+#                   (older docs say Boolector — that name is outdated).
+# ------------------------------------------------------------------------------
+[engines]
+smtbmc bitwuzla
+
+# ------------------------------------------------------------------------------
+# [script]
+# This is the Yosys synthesis script that prepares the design for the solver.
+#
+# read -formal spi_master_formal.sv
+#   Read the RTL with the FORMAL define active.
+#   This activates all `ifdef FORMAL blocks including our assertions.
+#
+# prep -top SPIMaster
+#   Elaborate and flatten the design, with SPIMaster as the top module.
+#
+# clk2fflogic
+#   CRITICAL pass. Converts all flip-flops driven by w_Clk (the gated clock)
+#   into clock-agnostic logic that the SMT solver can reason about directly.
+#   Without this, the solver cannot handle the gated clock w_Clk at all.
+# ------------------------------------------------------------------------------
+[script]
+read -formal spi_master_formal.sv
+prep -top SPIMaster
+clk2fflogic
+
+# ------------------------------------------------------------------------------
+# [files]
+# List every source file needed for elaboration.
+# All files are relative to the directory where you run sby.
+# ------------------------------------------------------------------------------
+[files]
+spi_master_formal.sv

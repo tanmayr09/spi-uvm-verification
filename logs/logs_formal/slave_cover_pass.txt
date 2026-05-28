@@ -1,0 +1,35 @@
+⦗OSS CAD Suite⦘ tanmay_rambha@LAPTOP-SRR1L4UC:~/projects/formal_learning/spi_bounded$ sby -f spi_slave.sby
+SBY 14:53:42 [spi_slave] Removing directory '/home/tanmay_rambha/projects/formal_learning/spi_bounded/spi_slave'.
+SBY 14:53:42 [spi_slave] Copy '/home/tanmay_rambha/projects/formal_learning/spi_bounded/spi_slave_formal.sv' to '/home/tanmay_rambha/projects/formal_learning/spi_bounded/spi_slave/src/spi_slave_formal.sv'.
+SBY 14:53:42 [spi_slave] engine_0: smtbmc bitwuzla
+SBY 14:53:42 [spi_slave] base: starting process "cd spi_slave/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 14:53:42 [spi_slave] base: finished (returncode=0)
+SBY 14:53:42 [spi_slave] prep: starting process "cd spi_slave/model; yosys -ql design_prep.log design_prep.ys"
+SBY 14:53:42 [spi_slave] prep: finished (returncode=0)
+SBY 14:53:42 [spi_slave] smt2: starting process "cd spi_slave/model; yosys -ql design_smt2.log design_smt2.ys"
+SBY 14:53:42 [spi_slave] smt2: finished (returncode=0)
+SBY 14:53:42 [spi_slave] engine_0: starting process "cd spi_slave; yosys-smtbmc -s bitwuzla --presat --unroll -c --noprogress -t 80  --append 0 --dump-vcd engine_0/trace%.vcd --dump-yw engine_0/trace%.yw --dump-vlogtb engine_0/trace%_tb.v --dump-smtc engine_0/trace%.smtc model/design_smt2.smt2"
+SBY 14:53:42 [spi_slave] engine_0: ##   0:00:00  Solver: bitwuzla
+SBY 14:53:42 [spi_slave] engine_0: ##   0:00:00  Checking cover reachability in step 0..
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Checking cover reachability in step 1..
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Checking cover reachability in step 2..
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Checking cover reachability in step 3..
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Checking cover reachability in step 4..
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Checking cover reachability in step 5..
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Checking cover reachability in step 6..
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Checking cover reachability in step 7..
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Checking cover reachability in step 8..
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Reached cover statement in step 8 at spiSlave: F8_complete_transfer
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Writing trace to VCD file: engine_0/trace0.vcd
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Writing trace to Verilog testbench: engine_0/trace0_tb.v
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Writing trace to constraints file: engine_0/trace0.smtc
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Writing trace to Yosys witness file: engine_0/trace0.yw
+SBY 14:53:43 [spi_slave] engine_0: ##   0:00:00  Status: passed
+SBY 14:53:43 [spi_slave] engine_0: finished (returncode=0)
+SBY 14:53:43 [spi_slave] engine_0: Status returned by engine: pass
+SBY 14:53:43 [spi_slave] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 14:53:43 [spi_slave] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 14:53:43 [spi_slave] summary: engine_0 (smtbmc bitwuzla) returned pass
+SBY 14:53:43 [spi_slave] summary: cover trace: spi_slave/engine_0/trace0.vcd
+SBY 14:53:43 [spi_slave] summary:   reached cover statement spiSlave.F8_complete_transfer at spi_slave_formal.sv:473.5-473.63 step 8
+SBY 14:53:43 [spi_slave] DONE (PASS, rc=0) 

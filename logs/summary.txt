@@ -1,0 +1,87 @@
+================ SPI UVM Verification Summary ================
+
+Tool           : Riviera-PRO (UVM 1.2)
+Top Module     : spi_tb_top
+Test Name      : spi_full_test
+Data Width     : 8-bit
+
+-------------------------------------------------------------
+Compilation
+-------------------------------------------------------------
+Status  : SUCCESS
+Errors  : 0
+Warnings: 2 (non-critical)
+
+-------------------------------------------------------------
+Test Description
+-------------------------------------------------------------
+Full regression including:
+- Corner Cases (100 transactions)
+- Single Bit Patterns (50 transactions)
+- Stress Tests (10 transactions)
+- Random Tests (500 transactions)
+
+-------------------------------------------------------------
+Functional Coverage Report (from simulation)
+-------------------------------------------------------------
+COVERAGE SUMMARY
+
+cg_master_tx     (MOSI value bins)     : 100.0%
+cg_slave_tx      (MISO value bins)     : 100.0%
+cg_transfer_pair (MOSI x MISO cross)   : 98.6%
+cg_rx_integrity  (received value bins) : 100.0%
+cg_back_to_back  (consec transitions)  : 100.0%
+cg_bit_toggle    (per-bit toggle)      : 100.0%
+
+-------------------------------------------------------------
+TOTAL (avg of 6 covergroups)           : 99.8%
+-------------------------------------------------------------
+
+-------------------------------------------------------------
+Scoreboard Report (from simulation)
+-------------------------------------------------------------
+SCOREBOARD SUMMARY  [spi_full_test]
+
+Transactions checked : 610
+Total checks         : 1220
+PASS                 : 1220
+FAIL                 : 0
+
+RESULT               : TEST PASSED
+
+-------------------------------------------------------------
+Assertion Detailed Report (from simulation)
+-------------------------------------------------------------
+a_reset_ss_high                     : HIT=31270 PASS=31270 FAIL=0
+a_reset_master_busy_low             : HIT=31270 PASS=31270 FAIL=0
+a_reset_slave_busy_low              : HIT=31270 PASS=31270 FAIL=0
+a_reset_miso_z                      : HIT=31270 PASS=31270 FAIL=0
+a_ss_high_slave_not_busy            : HIT=31260 PASS=31260 FAIL=0
+a_ss_low_both_busy                  : HIT=31260 PASS=31260 FAIL=0
+a_miso_z_when_ss_high               : HIT=31260 PASS=31260 FAIL=0
+a_sclk_idle_when_ss_high            : HIT=31259 PASS=31259 FAIL=0
+a_master_byte_ready_pulse           : HIT=31260 PASS=31260 FAIL=0
+a_slave_byte_ready_pulse            : HIT=31260 PASS=31260 FAIL=0
+a_slave_ready_after_master          : HIT=31260 PASS=31260 FAIL=0
+a_master_rx_stable                  : HIT=31260 PASS=31260 FAIL=0
+a_slave_rx_stable                   : HIT=31260 PASS=31260 FAIL=0
+a_no_transfer_when_busy             : HIT=31260 PASS=31260 FAIL=0
+
+TOTAL ASSERTION EVALUATIONS : 437679
+TOTAL PASSES               : 437679
+TOTAL FAILURES             : 0
+
+-------------------------------------------------------------
+Final UVM Report Summary
+-------------------------------------------------------------
+UVM_INFO    : 3702
+UVM_WARNING : 0
+UVM_ERROR   : 0
+UVM_FATAL   : 0
+
+-------------------------------------------------------------
+Simulation Status
+-------------------------------------------------------------
+STATUS: TEST PASSED
+
+==============================================================

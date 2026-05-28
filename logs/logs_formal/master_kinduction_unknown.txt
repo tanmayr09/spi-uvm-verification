@@ -1,0 +1,124 @@
+⦗OSS CAD Suite⦘ tanmay_rambha@LAPTOP-SRR1L4UC:~/projects/formal_learning/spi_bounded$ sby -f spi_master.sby
+SBY 14:50:55 [spi_master] Removing directory '/home/tanmay_rambha/projects/formal_learning/spi_bounded/spi_master'.
+SBY 14:50:55 [spi_master] Copy '/home/tanmay_rambha/projects/formal_learning/spi_bounded/spi_master_formal.sv' to '/home/tanmay_rambha/projects/formal_learning/spi_bounded/spi_master/src/spi_master_formal.sv'.
+SBY 14:50:55 [spi_master] engine_0: smtbmc bitwuzla
+SBY 14:50:55 [spi_master] base: starting process "cd spi_master/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 14:50:55 [spi_master] base: finished (returncode=0)
+SBY 14:50:55 [spi_master] prep: starting process "cd spi_master/model; yosys -ql design_prep.log design_prep.ys"
+SBY 14:50:55 [spi_master] prep: finished (returncode=0)
+SBY 14:50:55 [spi_master] smt2: starting process "cd spi_master/model; yosys -ql design_smt2.log design_smt2.ys"
+SBY 14:50:55 [spi_master] smt2: finished (returncode=0)
+SBY 14:50:55 [spi_master] engine_0.basecase: starting process "cd spi_master; yosys-smtbmc -s bitwuzla --presat --unroll --noprogress -t 30  --append 0 --dump-vcd engine_0/trace.vcd --dump-yw engine_0/trace.yw --dump-vlogtb engine_0/trace_tb.v --dump-smtc engine_0/trace.smtc model/design_smt2.smt2"
+SBY 14:50:55 [spi_master] engine_0.induction: starting process "cd spi_master; yosys-smtbmc -s bitwuzla --presat --unroll -i --noprogress -t 30  --append 0 --dump-vcd engine_0/trace_induct.vcd --dump-yw engine_0/trace_induct.yw --dump-vlogtb engine_0/trace_induct_tb.v --dump-smtc engine_0/trace_induct.smtc model/design_smt2.smt2"
+SBY 14:50:55 [spi_master] engine_0.basecase: ##   0:00:00  Solver: bitwuzla
+SBY 14:50:55 [spi_master] engine_0.induction: ##   0:00:00  Solver: bitwuzla
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 30..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 0..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 0..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 1..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 1..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 29..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 2..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 2..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 28..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 3..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 3..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 27..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 4..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 4..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 5..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 5..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 26..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 6..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 6..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 25..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 7..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 7..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 8..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 8..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 24..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 9..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 9..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 23..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 10..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 10..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 11..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 22..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 11..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 12..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 12..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 21..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 13..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 13..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 14..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 20..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 14..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 15..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 15..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 19..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 16..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 16..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 18..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 17..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 17..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 18..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 17..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 18..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 19..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 19..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 16..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 20..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 20..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 15..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 21..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 21..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 22..
+SBY 14:50:56 [spi_master] engine_0.induction: ##   0:00:00  Trying induction in step 14..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assertions in step 22..
+SBY 14:50:56 [spi_master] engine_0.basecase: ##   0:00:00  Checking assumptions in step 23..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Checking assertions in step 23..
+SBY 14:50:57 [spi_master] engine_0.induction: ##   0:00:01  Trying induction in step 13..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Checking assumptions in step 24..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Checking assertions in step 24..
+SBY 14:50:57 [spi_master] engine_0.induction: ##   0:00:01  Trying induction in step 12..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Checking assumptions in step 25..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Checking assertions in step 25..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Checking assumptions in step 26..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Checking assertions in step 26..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Checking assumptions in step 27..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Checking assertions in step 27..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Checking assumptions in step 28..
+SBY 14:50:57 [spi_master] engine_0.induction: ##   0:00:01  Trying induction in step 11..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Checking assertions in step 28..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Checking assumptions in step 29..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Checking assertions in step 29..
+SBY 14:50:57 [spi_master] engine_0.induction: ##   0:00:01  Trying induction in step 10..
+SBY 14:50:57 [spi_master] engine_0.basecase: ##   0:00:01  Status: passed
+SBY 14:50:57 [spi_master] engine_0.basecase: finished (returncode=0)
+SBY 14:50:57 [spi_master] engine_0.basecase: Status returned by engine for basecase: pass
+SBY 14:50:57 [spi_master] engine_0.induction: ##   0:00:01  Trying induction in step 9..
+SBY 14:50:58 [spi_master] engine_0.induction: ##   0:00:02  Trying induction in step 8..
+SBY 14:50:58 [spi_master] engine_0.induction: ##   0:00:02  Trying induction in step 7..
+SBY 14:50:58 [spi_master] engine_0.induction: ##   0:00:02  Trying induction in step 6..
+SBY 14:50:58 [spi_master] engine_0.induction: ##   0:00:02  Trying induction in step 5..
+SBY 14:50:58 [spi_master] engine_0.induction: ##   0:00:02  Trying induction in step 4..
+SBY 14:50:58 [spi_master] engine_0.induction: ##   0:00:02  Trying induction in step 3..
+SBY 14:51:00 [spi_master] engine_0.induction: ##   0:00:04  Trying induction in step 2..
+SBY 14:51:00 [spi_master] engine_0.induction: ##   0:00:04  Trying induction in step 1..
+SBY 14:51:01 [spi_master] engine_0.induction: ##   0:00:05  Trying induction in step 0..
+SBY 14:51:01 [spi_master] engine_0.induction: ##   0:00:05  Temporal induction failed!
+SBY 14:51:01 [spi_master] engine_0.induction: ##   0:00:05  Assert failed in SPIMaster: spi_master_formal.sv:627.13-627.35 (_witness_.assert_assert_spi_master_formal_sv_627_168)
+SBY 14:51:01 [spi_master] engine_0.induction: ##   0:00:05  Writing trace to VCD file: engine_0/trace_induct.vcd
+SBY 14:51:01 [spi_master] engine_0.induction: ##   0:00:05  Writing trace to Verilog testbench: engine_0/trace_induct_tb.v
+SBY 14:51:01 [spi_master] engine_0.induction: ##   0:00:05  Writing trace to constraints file: engine_0/trace_induct.smtc
+SBY 14:51:01 [spi_master] engine_0.induction: ##   0:00:05  Writing trace to Yosys witness file: engine_0/trace_induct.yw
+SBY 14:51:01 [spi_master] engine_0.induction: ##   0:00:05  Status: failed
+SBY 14:51:01 [spi_master] engine_0.induction: finished (returncode=1)
+SBY 14:51:01 [spi_master] engine_0.induction: Status returned by engine for induction: FAIL
+SBY 14:51:01 [spi_master] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:05 (5)
+SBY 14:51:01 [spi_master] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:08 (8)
+SBY 14:51:01 [spi_master] summary: engine_0 (smtbmc bitwuzla) returned pass for basecase
+SBY 14:51:01 [spi_master] summary: engine_0 (smtbmc bitwuzla) returned FAIL for induction
+SBY 14:51:01 [spi_master] summary: counterexample trace [induction]: spi_master/engine_0/trace_induct.vcd
+SBY 14:51:01 [spi_master] summary:   failed assertion SPIMaster._witness_.assert_assert_spi_master_formal_sv_627_168 at spi_master_formal.sv:627.13-627.35
+SBY 14:51:01 [spi_master] DONE (UNKNOWN, rc=4)
